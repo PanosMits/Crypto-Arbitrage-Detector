@@ -54,49 +54,47 @@ class TickerService {
 
             const [
                 binanceTicker,
-                coinbaseTicker,
-                // ftxTicker, // See NOTE in bot.js
+                // coinbaseTicker,
+                ftxTicker, // See NOTE in bot.js
                 gateioTicker,
                 kucoinTicker
             ] = await Promise.all([
                 this.binance.client.fetchTicker(baseCurrency + '/' + this.binance.getDollarEquivalentQuoteCurrency()),
-                this.coinbase.client.fetchTicker(baseCurrency + '/' + this.coinbase.getDollarEquivalentQuoteCurrency()),
-                // this.ftx.client.fetchTicker(baseCurrency + '/' + this.ftx.getDollarEquivalentQuoteCurrency()),
+                // this.coinbase.client.fetchTicker(baseCurrency + '/' + this.coinbase.getDollarEquivalentQuoteCurrency()),
+                this.ftx.client.fetchTicker(baseCurrency + '/' + this.ftx.getDollarEquivalentQuoteCurrency()),
                 this.gateio.client.fetchTicker(baseCurrency + '/' + this.gateio.getDollarEquivalentQuoteCurrency()),
                 this.kucoin.client.fetchTicker(baseCurrency + '/' + this.kucoin.getDollarEquivalentQuoteCurrency()),
             ]);
 
-            return {
-                market,
-                [this.binance.client.name]: binanceTicker.ask,
-                [this.coinbase.client.name]: coinbaseTicker.ask,
-                // [this.ftx.client.name]: ftxTicker.ask,
-                [this.gateio.client.name]: gateioTicker.ask,
-                [this.kucoin.client.name]: kucoinTicker.ask,
-            }
+            return [
+                { exchange: this.binance, market, bid: binanceTicker.bid, ask: binanceTicker.ask },
+                // { exchange: this.coinbase, market, bid: coinbaseTicker.bid, ask: coinbaseTicker.ask },
+                { exchange: this.ftx, market, bid: ftxTicker.bid, ask: ftxTicker.ask },
+                { exchange: this.gateio, market, bid: gateioTicker.bid, ask: gateioTicker.ask },
+                { exchange: this.kucoin, market, bid: kucoinTicker.bid, ask: kucoinTicker.ask },
+            ];
         } else {
             const [
                 binanceTicker,
-                coinbaseTicker,
-                // ftxTicker,
+                // coinbaseTicker,
+                ftxTicker,
                 gateioTicker,
                 kucoinTicker
             ] = await Promise.all([
                 this.binance.client.fetchTicker(market),
-                this.coinbase.client.fetchTicker(market),
-                // this.ftx.client.fetchTicker(market),
+                // this.coinbase.client.fetchTicker(market),
+                this.ftx.client.fetchTicker(market),
                 this.gateio.client.fetchTicker(market),
                 this.kucoin.client.fetchTicker(market),
             ]);
 
-            return {
-                market,
-                [this.binance.client.name]: binanceTicker.ask,
-                [this.coinbase.client.name]: coinbaseTicker.ask,
-                // [this.ftx.client.name]: ftxTicker.ask,
-                [this.gateio.client.name]: gateioTicker.ask,
-                [this.kucoin.client.name]: kucoinTicker.ask,
-            }
+            return [
+                { exchange: this.binance, market, bid: binanceTicker.bid, ask: binanceTicker.ask },
+                // { exchange: this.coinbase, market, bid: coinbaseTicker.bid, ask: coinbaseTicker.ask },
+                { exchange: this.ftx, market, bid: ftxTicker.bid, ask: ftxTicker.ask },
+                { exchange: this.gateio, market, bid: gateioTicker.bid, ask: gateioTicker.ask },
+                { exchange: this.kucoin, market, bid: kucoinTicker.bid, ask: kucoinTicker.ask },
+            ];
         }
     }
 }

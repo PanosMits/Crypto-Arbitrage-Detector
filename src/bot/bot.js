@@ -16,6 +16,8 @@
  *  from the object of exchanges after getting the lowest bid price.
  */
 
+const chalk = require('chalk');
+
 const MarketService = require('../services/market-service');
 const TickerService = require('../services/ticker-service');
 
@@ -40,61 +42,40 @@ class Bot {
     }
 
     async run() {
-        console.time('Get Available Pairs Time');
-        // const marketsAvailableInEveryExchange = await this.marketService.getMarketsAvailableInEveryExchange(); // TODO: Add back after testing
-        const marketsAvailableInEveryExchange = ['BTC/USD', 'ETH/USD']; // TODO: Remove after testing
-        console.log(marketsAvailableInEveryExchange);
-        console.timeEnd('Get Available Pairs Time');
-
-        console.time('Get Tickers Time');
-        const tickerResults = await Promise.allSettled(marketsAvailableInEveryExchange.map((market) => {
+        const marketsAvailableInEveryExchange = await this.marketService.getDollarMarketsAvailableInEveryExchange();
+        const tickerResults = await Promise.all(marketsAvailableInEveryExchange.map((market) => {
             return this.tickerService.getTickersForMarketByExchange(market);
         }));
-        console.log(tickerResults);
-        console.timeEnd('Get Tickers Time');
-    }
 
-    // async run() {
-    //     const coins = ['BTC', 'ETH', 'ADA'];
-    //
-    //     return Promise.all(coins.map(async (coin) => {
-    //         let exchanges = [];
-    //
-    //         const [binanceResult, coinbaseResult, huobiResult, kucoinResult] = await Promise.all([
-    //             this.binance.fetchTicker(`${coin}/USDT`),
-    //             this.coinbase.fetchTicker(`${coin}/USD`),
-    //             huobi.fetchTicker(`${coin}/USDT`),
-    //             kucoin.fetchTicker(`${coin}/USDT`),
-    //         ]);
-    //
-    //         exchanges = [...exchanges,
-    //             { exchange: this.binance, bid: binanceResult.bid, ask: binanceResult.ask },
-    //             { exchange: this.coinbase, bid: coinbaseResult.bid, ask: coinbaseResult.ask },
-    //             { exchange: huobi, bid: huobiResult.bid, ask: huobiResult.ask },
-    //             { exchange: kucoin, bid: kucoinResult.bid, ask: kucoinResult.ask },
-    //         ];
-    //
-    //         const bidPrices = exchanges.map((pair) => pair.bid);
-    //         const lowestBidPrice = Math.min(...bidPrices);
-    //         const lowestBidPriceExchange = exchanges.filter((exchange) => exchange.bid === lowestBidPrice)[0];
-    //
-    //         const filteredExchanges = exchanges.filter((exchange) => exchange.exchange !== lowestBidPriceExchange.exchange); // see CONSIDERATIONS 1
-    //
-    //         const askPrices = filteredExchanges.map((pair) => pair.ask);
-    //         const highestAskPrice = Math.max(...askPrices);
-    //         const highestBidPriceExchange = filteredExchanges.filter((exchange) => exchange.ask === highestAskPrice)[0];
-    //
-    //         const percentageDifferenceBetweenHighestAndLowest = ((1 - (lowestBidPrice / highestAskPrice)) * 100).toFixed(2);
-    //
-    //         console.log('Coin: ', coin);
-    //         console.log(`Buy ${coin} from ${lowestBidPriceExchange.exchange.name} for: `, lowestBidPrice);
-    //         console.log(`Sell ${coin} at ${highestBidPriceExchange.exchange.name} for: `, highestAskPrice);
-    //         console.log('Percentage difference:', percentageDifferenceBetweenHighestAndLowest, '%');
-    //         console.log('========================================================================');
-    //
-    //         return '';
-    //     }));
-    // }
+        const arbitrageResults = tickerResults.map(ticker => {
+            const lowestBidPrice = Math.min(...ticker.map((pair) => pair.bid));
+            const lowestBidPriceExchange = ticker.filter((tickerData) => tickerData.bid === lowestBidPrice)[0];
+
+            // see CONSIDERATIONS 1 on why filtering out the exchange with the lowest bid price just before searching for the exchange with the highest ask price
+            const filteredTicker = ticker.filter((tickerData) => tickerData.exchange !== lowestBidPriceExchange.exchange);
+            const highestAskPrice = Math.max(...filteredTicker.map((ticker) => ticker.ask));
+            const highestBidPriceExchange = filteredTicker.filter((ticker) => ticker.ask === highestAskPrice)[0];
+
+            const percentageDifferenceBetweenHighestAndLowest = ((1 - (lowestBidPrice / highestAskPrice)) * 100).toFixed(2);
+
+            // console.log(`${chalk.green(ticker[0].market)}`);
+            // console.log(`Buy from ${ lowestBidPriceExchange.exchange.client.name } for: ${ chalk.yellow(lowestBidPrice) }`);
+            // console.log(`Sell at ${ highestBidPriceExchange.exchange.client.name } for: ${ chalk.yellow(highestAskPrice) }`);
+            // console.log(`Percentage Difference: ${chalk.yellow(percentageDifferenceBetweenHighestAndLowest + '%')}`);
+            // console.log('');
+            // console.log('=============================================');
+            // console.log('');
+
+            return {
+                market: ticker[0].market,
+                buyFrom: lowestBidPriceExchange.exchange,
+                sellTo: highestBidPriceExchange.exchange,
+                percentageDifference: percentageDifferenceBetweenHighestAndLowest,
+            }
+        });
+
+        console.log(arbitrageResults);
+    }
 }
 
 module.exports = new Bot(MarketService, TickerService);
